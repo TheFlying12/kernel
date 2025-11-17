@@ -1,0 +1,146 @@
+NATURAL LANGUAGE TERMINAL INTERPRETER - HIGH LEVEL PLAN
+========================================================
+
+CORE CONCEPT:
+A lightweight wrapper around your existing shell that translates natural language into shell commands,
+executes them, and returns output - all in real-time within your terminal session.
+
+ARCHITECTURE:
+-------------
+
+1. ENTRY POINT (ai_mode.sh)
+   - Simple bash/zsh script that intercepts "agent" keyword
+   - Maintains current working directory context
+   - Preserves environment variables from parent shell
+   - Minimal overhead - should feel native
+
+2. NL → COMMAND TRANSLATION ENGINE
+   - Use OpenAI API (GPT-4 or Claude via API) for command generation
+   - Send: user's NL input + current directory + OS type + shell type
+   - Receive: executable shell command(s)
+   - System prompt should emphasize: safety, accuracy, single-purpose commands
+   - Include examples in prompt: "list csv files" → "ls *.csv", "disk usage" → "du -sh *"
+
+3. SAFETY LAYER
+   - Show generated command BEFORE execution
+   - Prompt user: "Execute: [command]? (y/n/edit)"
+   - Flag dangerous commands (rm -rf, sudo, chmod, etc.) with extra warning
+   - Allow user to edit command before running
+   - Timeout for API calls (3-5 seconds max)
+
+4. EXECUTION & OUTPUT
+   - Run command in current shell context (not subprocess)
+   - Capture stdout and stderr
+   - Display output naturally (as if user typed command)
+   - Preserve exit codes
+   - Handle multi-line outputs gracefully
+
+5. CONTEXT AWARENESS
+   - Pass to AI: pwd, ls output (for file context), recent command history
+   - Remember conversation within session (last 5-10 exchanges)
+   - Detect when user wants chained commands vs single command
+
+6. SHELL INTEGRATION
+   - Add alias to .zshrc/.bashrc: alias agent='source /path/to/ai_mode.sh'
+   - Use 'source' instead of executing to maintain shell context
+   - Exit returns user to exact same shell state
+
+IMPLEMENTATION PHASES:
+---------------------
+
+PHASE 1 - MVP (Get it working):
+   □ API integration (OpenAI or Anthropic)
+   □ Basic NL → command translation
+   □ Command execution with output display
+   □ Simple safety prompt (show command, ask y/n)
+
+PHASE 2 - Safety & UX:
+   □ Dangerous command detection
+   □ Command editing before execution
+   □ Better error handling (API failures, invalid commands)
+   □ Add color coding (AI responses, commands, warnings)
+
+PHASE 3 - Intelligence:
+   □ Context awareness (send pwd, file list)
+   □ Conversation memory within session
+   □ Handle complex multi-step requests
+   □ Learn from corrections (if user edits command, remember pattern)
+
+PHASE 4 - Polish:
+   □ Configuration file (~/.ai_terminal_config)
+   □ Multiple AI provider support
+   □ Command history logging
+   □ Keyboard shortcuts (Ctrl+G for agent mode?)
+   □ Auto-complete for common patterns
+
+TECHNICAL CONSIDERATIONS:
+------------------------
+
+API CHOICE:
+- OpenAI GPT-5-nano: Best command generation, requires API key, p cheap ngl
+- Anthropic Claude: Great safety, similar cost
+- Local LLM (ollama): Free, slower, less accurate but private
+- Recommendation: Start with OpenAI, make it pluggable
+
+PROMPT ENGINEERING:
+- System prompt should include: OS type, shell type, safety guidelines
+- Few-shot examples of NL → command pairs
+- Instruct to return ONLY the command, no explanations (unless asked)
+- Handle ambiguity by asking clarifying questions
+
+ERROR HANDLING:
+- API timeout → fallback message
+- Invalid command → show error, let user rephrase
+- Network issues → graceful degradation
+- Rate limits → queue or warn user
+
+PERFORMANCE:
+- Cache common translations locally (optional optimization)
+- Async API calls if possible
+- Keep script lightweight (<200 lines for MVP)
+
+SECURITY:
+- Never auto-execute without confirmation
+- Sanitize inputs before sending to API
+- Don't send sensitive env vars to API
+- Store API keys securely (not in script)
+
+FILE STRUCTURE:
+--------------
+ai_mode.sh          - Main script (entry point, shell loop)
+ai_translate.sh     - API call logic (separate for modularity)
+.ai_config          - User config (API key, provider, safety level)
+.ai_history         - Session logs (optional)
+
+QUICK START COMMANDS:
+--------------------
+1. Set API key: export OPENAI_API_KEY="your-key"
+2. Make executable: chmod +x ai_mode.sh
+3. Add to shell: echo 'alias agent="source ~/path/to/ai_mode.sh"' >> ~/.zshrc
+4. Reload: source ~/.zshrc
+5. Use: type "agent" then natural language
+
+EXAMPLE INTERACTIONS:
+--------------------
+User: "show me all python files modified in last 7 days"
+AI: Execute: find . -name "*.py" -mtime -7 ? (y/n)
+
+User: "what's taking up space in this folder"
+AI: Execute: du -sh * | sort -hr ? (y/n)
+
+User: "compress all logs into archive"
+AI: Execute: tar -czf logs_archive.tar.gz *.log ? (y/n)
+
+FUTURE ENHANCEMENTS:
+-------------------
+- Explain mode: "what does this command do?"
+- Fix mode: "fix the last command that failed"
+- Pipe AI output to commands: agent "find large files" | xargs rm
+- Integration with man pages for better context
+- Learn user's command preferences over time
+
+
+NOTES ON CURRENT DEVELOPMENT:
+----------------------------
+- can pipe output to a python file using this result=$(echo "$response" | python3 parse_response.py)
+- need to write interaction to be like above, AI doesnt anticipate latency issues but can cross that bridge later.

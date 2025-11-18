@@ -49,7 +49,7 @@ IMPLEMENTATION PHASES:
 ---------------------
 
 PHASE 1 - MVP (Get it working):
-   □ API integration (OpenAI or Anthropic)
+   □ API integration (OpenAI or Anthropic or Gemini)
    □ Basic NL → command translation
    □ Command execution with output display
    □ Simple safety prompt (show command, ask y/n)

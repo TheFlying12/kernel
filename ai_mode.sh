@@ -10,7 +10,6 @@ echo "----------------------------------------"
 ai_mode() {
     echo ""
     echo "You can now interact with the AI assistant."
-    echo "Type 'back' to return to normal shell mode"
     echo "Type 'exit' to quit entirely"
     echo ""
     
@@ -21,7 +20,7 @@ ai_mode() {
         if [[ "$ai_input" == "exit" ]]; then
             exit 0
         elif [[ -z "$ai_input" ]]; then
-            continue
+            echo "Please enter a command"
         else
             # integrate with an actual AI API here
             echo "🤖 AI: Processing '$ai_input'..."
@@ -46,9 +45,18 @@ ai_mode() {
                     "temperature": 0.3
                 }')
 
-    echo "🤖 AI: $response"
-    result=$(echo "$response" | jq -r '.choices[0].message.content')
-    echo "🤖 AI: $result"
+            echo "🤖 AI: $response"
+            result=$(echo "$response" | jq -r '.choices[0].message.content')    
+            echo "🤖 AI: $result"
+
+            echo "🤖 Suggested command: $result"
+            echo -n "Execute this command? (y/n): "
+            read -r confirmInput
+            if [[ "${confirmInput,,}" == "y" ]]; then
+                eval "$result"
+            else
+                echo "Command cancelled"
+            fi
 
         fi
     done
@@ -57,12 +65,11 @@ ai_mode() {
 # Main shell loop
 while true; do
     read -r input
-    
     if [[ "$input" == "agent" ]]; then
         ai_mode
     elif [[ "$input" == "exit" ]]; then
         break
     else
-        continue
+        echo "Invalid command"
     fi
 done

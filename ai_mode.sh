@@ -36,21 +36,25 @@ ai_mode() {
                             "generationConfig": {"temperature": 0.1, "maxOutputTokens": 100, "thinkingConfig": {"thinkingBudget": 0}},
                         }')
 
-            #echo "🤖 Raw Response: $response"
+            # Process response with safety_check.py
+            # This handles JSON parsing, error checking, and safety validation
+            result=$(echo "$response" | python3 safety_check.py 2>&1)
+            exit_code=$?
 
-            # Correct Gemini parsing:
-            result=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')
-            echo -e "${PURPLE}🤖 AI: $result${NC}"
-
-            echo -e "${CYAN}🤖 Suggested command: $result${NC}"
-            echo -ne "${YELLOW}Execute this command? (y/n): ${NC}"
-            read -r confirmInput
-            #echo $result
-            echo $confirmInput
-            if [[ "${confirmInput}" == "y" || "${confirmInput}" == "Y" ]]; then
-                eval "$result"
+            if [[ $exit_code -eq 0 ]]; then
+                echo -e "${PURPLE}🤖 AI: $result${NC}"
+                echo -e "${CYAN}🤖 Suggested command: $result${NC}"
+                echo -ne "${YELLOW}Execute this command? (y/n): ${NC}"
+                read -r confirmInput
+                
+                if [[ "${confirmInput,,}" == "y" ]]; then
+                    eval "$result"
+                else
+                    echo -e "${RED}Command cancelled${NC}"
+                fi
             else
-                echo -e "${RED}Command cancelled${NC}"
+                # Error or safety violation occurred
+                echo -e "${RED}$result${NC}"
             fi
 
         fi

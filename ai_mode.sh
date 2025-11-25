@@ -31,12 +31,12 @@ ai_mode() {
                         -H 'Content-Type: application/json' \
                         -X POST \
                         -d '{
-                            "systemInstruction": {"parts": [{"text": "Generate bash/zsh commands ONLY..."}]},
+                            "systemInstruction": {"parts": [{"text": "You are a terminal command generator. Generate only the shell command needed, no explanations or markdown. Be concise, and as directly related to the query as you possibly can. "}]},
                             "contents": [{"role": "user", "parts": [{"text": "'"$ai_input"'"}]}],
                             "generationConfig": {"temperature": 0.1, "maxOutputTokens": 100, "thinkingConfig": {"thinkingBudget": 0}},
                         }')
 
-            # echo "🤖 Raw Response: $response"
+            #echo "🤖 Raw Response: $response"
 
             # Correct Gemini parsing:
             result=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')
@@ -45,7 +45,9 @@ ai_mode() {
             echo -e "${CYAN}🤖 Suggested command: $result${NC}"
             echo -ne "${YELLOW}Execute this command? (y/n): ${NC}"
             read -r confirmInput
-            if [[ "${confirmInput,,}" == "y" ]]; then
+            #echo $result
+            echo $confirmInput
+            if [[ "${confirmInput}" == "y" || "${confirmInput}" == "Y" ]]; then
                 eval "$result"
             else
                 echo -e "${RED}Command cancelled${NC}"

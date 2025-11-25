@@ -41,6 +41,37 @@ ai_mode() {
             result=$(echo "$response" | python3 safety_check.py 2>&1)
             exit_code=$?
 
+            # Correct Gemini parsing:
+            result=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')
+            echo -e "${PURPLE}🤖 AI: $result${NC}"
+
+            echo -e "${CYAN}🤖 Suggested command: $result${NC}"
+            echo -ne "${YELLOW}Execute this command? (y/n/i to edit): ${NC}"
+            read -r confirmInput
+            
+            if [[ "${confirmInput}" == "i" || "${confirmInput}" == "I" ]]; then
+                # Check if running in Zsh
+                if [ -n "$ZSH_VERSION" ]; then
+                    # Zsh editing
+                    vared -p "${YELLOW}Edit command: ${NC}" -c result
+                elif command -v zsh >/dev/null 2>&1; then
+                    # Bash on macOS (or Linux with zsh installed)
+                    # Use zsh to handle the editing because Bash 3.2 (macOS default) is limited
+                    # -f: no startup files (.zshrc), -i: interactive (enables zle for vared)
+                    # We capture the output, but vared works on the TTY
+                    # We need to pass the initial value via env var to avoid quoting hell
+                    result=$(PREFILLED="$result" zsh -f -i -c 'vared -p "Edit command: " -c PREFILLED; echo -n "$PREFILLED"')
+                else
+                    # Fallback for Bash without Zsh (e.g. pure Linux minimal)
+                    # Try read -e -i (Bash 4+)
+                    read -e -p "Edit command: " -i "$result" result
+                fi
+                
+                confirmInput="y"
+            fi
+
+            if [[ "${confirmInput}" == "y" || "${confirmInput}" == "Y" ]]; then
+                eval "$result"
             if [[ $exit_code -eq 0 ]]; then
                 echo -e "${PURPLE}🤖 AI: $result${NC}"
                 echo -e "${CYAN}🤖 Suggested command: $result${NC}"

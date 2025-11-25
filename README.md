@@ -1,3 +1,4 @@
+# kernel.sh
 # AI Terminal
 
 A natural language terminal assistant that translates your English requests into shell commands.

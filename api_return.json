@@ -2,29 +2,23 @@
     "candidates": [
         {
             "content": {
-                "parts": [
-                    {
-                        "text": "I cannot answer factual questions."
-                    }
-                ],
                 "role": "model"
             },
-            "finishReason": "STOP",
+            "finishReason": "MAX_TOKENS",
             "index": 0
         }
     ],
     "usageMetadata": {
-        "promptTokenCount": 144,
-        "candidatesTokenCount": 6,
-        "totalTokenCount": 189,
+        "promptTokenCount": 120,
+        "totalTokenCount": 219,
         "promptTokensDetails": [
             {
                 "modality": "TEXT",
-                "tokenCount": 144
+                "tokenCount": 120
             }
         ],
-        "thoughtsTokenCount": 39
+        "thoughtsTokenCount": 99
     },
     "modelVersion": "gemini-2.5-flash",
-    "responseId": "NF0macH2Bqjgz7IP9pOayA4"
+    "responseId": "OmYmacWnDLPlz7IP6IqHsA4"
 }

@@ -1,13 +1,20 @@
 {
     "history": [
         {
-            "command": "",
-            "output": ""
+            "command": "hello",
+            "output": "echo hello"
+        },
+        {
+            "command": "create a directory called rna",
+            "output": "mkdir rna"
+        },
+        {
+            "command": "do what I said 2 commands ago",
+            "output": "ls -F"
         }
     ],
-    "cwd": "",
-    "shell": "",
-    "os": "",
+    "cwd": "/Users/tejus/Documents/Me/Coding/ai_terminal_thing",
+    "shell": "/bin/zsh",
+    "os": "Darwin",
     "home_directory": ""
-
 }

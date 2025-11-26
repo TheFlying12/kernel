@@ -16,7 +16,12 @@ load_dotenv()
 # Configuration
 API_KEY_ENV = "GEMINI_API_KEY"
 MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-SESSION_FILE = os.path.expanduser("~/.ai_terminal/current_session.json")
+
+# Check for local session file first (for dev/debugging), then global
+if os.path.exists("current_session.json"):
+    SESSION_FILE = "current_session.json"
+else:
+    SESSION_FILE = os.path.expanduser("~/.ai_terminal/current_session.json")
 
 # Safety Patterns (from safety_check.py)
 DANGER_PATTERNS = [
@@ -161,13 +166,8 @@ def main():
     if not is_safe:
         print(f"WARNING: {reason}", file=sys.stderr)
         
-    print(command)
     
-    # Update history with the new interaction
-    # Note: We assume the user runs the command. Ideally we'd update this *after* confirmation,
-    # but for now we'll assume success to keep the flow simple.
-    session['history'].append({"command": query, "output": command})
-    save_session(session)
+    print(command)
 
 if __name__ == "__main__":
     main()

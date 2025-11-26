@@ -1,0 +1,30 @@
+{
+    "candidates": [
+        {
+            "content": {
+                "parts": [
+                    {
+                        "text": "I cannot answer factual questions."
+                    }
+                ],
+                "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+        }
+    ],
+    "usageMetadata": {
+        "promptTokenCount": 144,
+        "candidatesTokenCount": 6,
+        "totalTokenCount": 189,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 144
+            }
+        ],
+        "thoughtsTokenCount": 39
+    },
+    "modelVersion": "gemini-2.5-flash",
+    "responseId": "NF0macH2Bqjgz7IP9pOayA4"
+}

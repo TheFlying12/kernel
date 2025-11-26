@@ -23,27 +23,24 @@ ai_mode() {
         elif [[ -z "$ai_input" ]]; then
             echo -e "${YELLOW}Please enter a command${NC}"
         else
-            # integrate with an actual AI API here
-            echo -e "${PURPLE}🤖 AI: Processing '$ai_input'...${NC}"
-
-            response=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
-                        -H "x-goog-api-key: $GEMINI_API_KEY" \
-                        -H 'Content-Type: application/json' \
-                        -X POST \
-                        -d '{
-                            "systemInstruction": {"parts": [{"text": "You are a terminal command generator. Generate only the shell command needed, no explanations or markdown. Be concise, and as directly related to the query as you possibly can. "}]},
-                            "contents": [{"role": "user", "parts": [{"text": "'"$ai_input"'"}]}],
-                            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 100, "thinkingConfig": {"thinkingBudget": 0}},
-                        }')
-
-            # Process response with safety_check.py
-            # This handles JSON parsing, error checking, and safety validation
-            result=$(echo "$response" | python3 safety_check.py 2>&1)
+            # Call the Python core (handles API, Context, Safety)
+            # Capture stdout (command) and stderr (warnings/errors)
+            # We use a temp file for stderr to keep it clean
+            echo "Pre calling ai_core.py"
+            output=$(./ai_core.py "$ai_input" 2> /tmp/ai_error.log)
+            echo $output
             exit_code=$?
+            echo "Post calling ai_core.py"
+
+            # Check for safety warnings or errors
+            if [[ -s /tmp/ai_error.log ]]; then
+                echo -e "${RED}$(cat /tmp/ai_error.log)${NC}"
+            fi
 
             if [[ $exit_code -eq 0 ]]; then
+                result="$output"
                 echo -e "${PURPLE}🤖 AI: $result${NC}"
-                echo -e "${CYAN}🤖 Suggested command: $result${NC}"
+                #echo -e "${CYAN}🤖 Suggested command: $result${NC}"
                 echo -ne "${YELLOW}Execute this command? (y/n/i to edit): ${NC}"
                 read -r confirmInput
                 

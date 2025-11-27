@@ -26,11 +26,9 @@ ai_mode() {
             # Call the Python core (handles API, Context, Safety)
             # Capture stdout (command) and stderr (warnings/errors)
             # We use a temp file for stderr to keep it clean
-            echo "Pre calling ai_core.py"
             output=$(./ai_core.py "$ai_input" 2> /tmp/ai_error.log)
             echo $output
             exit_code=$?
-            echo "Post calling ai_core.py"
 
             # Check for safety warnings or errors
             if [[ -s /tmp/ai_error.log ]]; then

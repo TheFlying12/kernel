@@ -120,8 +120,6 @@ User Query: {query}
         req = urllib.request.Request(MODEL_URL, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
         with urllib.request.urlopen(req) as response:
             result = json.loads(response.read().decode('utf-8'))
-            with open("api_return.json", "w") as outfile:
-                json.dump(result, outfile, indent=4)
 
             try:
                 candidate = result['candidates'][0]['content']['parts'][0]['text'].strip()

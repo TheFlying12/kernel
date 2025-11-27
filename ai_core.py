@@ -11,17 +11,16 @@ import platform
 import logging
 
 
-load_dotenv()
+# Load .env from script directory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(script_dir, ".env"))
 
 # Configuration
 API_KEY_ENV = "GEMINI_API_KEY"
 MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
-# Check for local session file first (for dev/debugging), then global
-if os.path.exists("current_session.json"):
-    SESSION_FILE = "current_session.json"
-else:
-    SESSION_FILE = os.path.expanduser("~/.ai_terminal/current_session.json")
+# Always use global session file for consistency
+SESSION_FILE = os.path.expanduser("~/.ai_terminal/current_session.json")
 
 # Safety Patterns (from safety_check.py)
 DANGER_PATTERNS = [
@@ -116,24 +115,49 @@ User Query: {query}
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 100}
     }
     
+
     try:
         req = urllib.request.Request(MODEL_URL, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
         with urllib.request.urlopen(req) as response:
             result = json.loads(response.read().decode('utf-8'))
+            
+            # Debug: Save raw response
+            try:
+                with open('results.json', 'w') as f:
+                    json.dump(result, f, indent=4)
+            except Exception:
+                pass
+
 
             try:
-                candidate = result['candidates'][0]['content']['parts'][0]['text'].strip()
+                if 'candidates' not in result or not result['candidates']:
+                    return "Error: No candidates returned. Check safety settings or prompt."
+                
+                candidate_data = result['candidates'][0]
+                
+                if 'content' not in candidate_data:
+                    finish_reason = candidate_data.get('finishReason', 'UNKNOWN')
+                    return f"Error: No content generated. Finish reason: {finish_reason}"
+                    
+                if 'parts' not in candidate_data['content']:
+                     return "Error: Content has no parts."
+
+                candidate = candidate_data['content']['parts'][0]['text'].strip()
                 # Clean up markdown code blocks if present
                 candidate = re.sub(r'^```\w*\n', '', candidate)
                 candidate = re.sub(r'\n```$', '', candidate)
-                #print("\n"+candidate.strip()+"what api is returning\n", file=sys.stderr)
                 return candidate.strip()
             except KeyError as e:
-                return f"Error: KeyError - {e}"
+                with open('errors.json', 'w') as f:
+                    json.dump(result, f, indent=4)
+                return f"Error: KeyError - {e}. Details saved to errors.json"
             except IndexError as e:
-                return f"Error: IndexError - {e}"
+                with open('errors.json', 'w') as f:
+                    json.dump(result, f, indent=4)
+                return f"Error: IndexError - {e}. Details saved to errors.json"
     except urllib.error.HTTPError as e:
         return f"Error: API request failed with status {e.code}: {e.read().decode('utf-8')}"
+        print(result, file=sys.stderr)
     except Exception as e:
         return f"Error: {str(e)}"
 

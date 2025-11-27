@@ -4,7 +4,7 @@ import sys
 import json
 import platform
 
-SESSION_FILE = os.path.expanduser("./current_session.json")
+SESSION_FILE = os.path.expanduser("~/.ai_terminal/current_session.json")
 
 def load_session():
     default_session = {

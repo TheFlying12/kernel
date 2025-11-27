@@ -58,7 +58,7 @@ def main():
         session['history'] = session['history'][-20:]
         
     save_session(session)
-    print("\n session saved\n", file=sys.stderr)
+    #print("\n session saved\n", file=sys.stderr)
 
 if __name__ == "__main__":
     main()

@@ -61,7 +61,7 @@ ai_mode() {
                 if [[ "${confirmInput}" == "y" || "${confirmInput}" == "Y" ]]; then
                     eval "$result"
                     # Update history only after successful execution
-                    python3 "$SCRIPT_DIR/update_session.py" "$ai_input" "$result"
+                    python "$SCRIPT_DIR/update_session.py" "$ai_input" "$result"
                 else
                     printf "${RED}Command cancelled${NC}\n"
                 fi

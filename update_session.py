@@ -3,8 +3,8 @@ import os
 import sys
 import json
 import platform
-
-SESSION_FILE = os.path.expanduser("~/.ai_terminal/current_session.json")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+SESSION_FILE = os.path.expanduser(script_dir + "/current_session.json")
 
 def load_session():
     default_session = {

@@ -57,6 +57,52 @@ def safety_check(command):
             return False, f"Matched danger pattern: {pattern}"
     return True, "Safe"
 
+def get_directory_context():
+    """Scans relevant directories to provide context for navigation."""
+    dirs = []
+    
+    # 1. Current Working Directory (Depth 1)
+    try:
+        cwd = os.getcwd()
+        with os.scandir(cwd) as entries:
+            for entry in entries:
+                if entry.is_dir() and not entry.name.startswith('.'):
+                    dirs.append(f"{entry.path} (in CWD)")
+    except Exception:
+        pass
+
+    # 2. Home Directory (Depth 1)
+    try:
+        home = os.path.expanduser("~")
+        with os.scandir(home) as entries:
+            for entry in entries:
+                if entry.is_dir() and not entry.name.startswith('.'):
+                    dirs.append(f"{entry.path} (in Home)")
+    except Exception:
+        pass
+        
+    # 3. Documents (Depth 2 - to find things like ~/Documents/Me/Coding)
+    try:
+        docs = os.path.expanduser("~/Documents")
+        if os.path.exists(docs):
+             for root, subdirs, files in os.walk(docs):
+                # Calculate depth
+                depth = root[len(docs):].count(os.sep)
+                if depth < 2:
+                    for d in subdirs:
+                        if not d.startswith('.'):
+                            dirs.append(os.path.join(root, d))
+                else:
+                    # Don't go deeper
+                    del subdirs[:]
+    except Exception:
+        pass
+        
+    # Deduplicate and limit
+    unique_dirs = sorted(list(set(dirs)))
+    # Limit to reasonable amount to save tokens, prioritizing deep matches if possible or just first 50
+    return unique_dirs[:50]
+
 def load_session():
     # Default session structure
     default_session = {
@@ -96,11 +142,17 @@ def call_gemini(query, api_key, session):
     for item in session.get("history", [])[-5:]: # Last 5 items
         history_text += f"User: {item['command']}\nAI: {item['output']}\n"
         
+    # Get directory context
+    dir_context = get_directory_context()
+    dir_list = "\n".join(dir_context)
+
     context_prompt = f"""
 Context:
 - OS: {session['os']}
 - Shell: {session['shell']}
 - CWD: {session['cwd']}
+- Known Directories:
+{dir_list}
 - History:
 {history_text}
 
@@ -112,7 +164,7 @@ User Query: {query}
             "parts": [{"text": "You are a terminal command generator. Generate only the shell command needed, no explanations or markdown. Be concise. Use the provided context (OS, CWD, History) to generate accurate commands."}]
         },
         "contents": [{"role": "user", "parts": [{"text": context_prompt}]}],
-        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 100}
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192}
     }
     
 

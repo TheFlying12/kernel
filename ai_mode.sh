@@ -1,50 +1,44 @@
 #!/bin/bash
 
-# run: chmod +x ai_shell.sh && ./ai_shell.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/colors.sh"
 
-source .env
-source colors.sh
 
-echo -e "${BLUE}Type 'agent' to enter AI mode, 'exit' to quit${NC}"
+echo "${BLUE}Ask Away!!${NC}"
 echo "----------------------------------------"
 
 ai_mode() {
-    echo ""
-    echo -e "${GREEN}You can now interact with the AI assistant.${NC}"
-    echo -e "${GREEN}Type 'exit' to quit entirely${NC}"
-    echo ""
+    #echo ""
+    #echo "${GREEN}You can now interact with the AI assistant.${NC}"
+    #echo "${GREEN}Type 'exit' to quit entirely${NC}"
+    #echo ""
     
     while true; do
-        echo -ne "${BLUE}AI> ${NC}"
+        printf "${BLUE}AI> ${NC}"
         read -r ai_input
         
         if [[ "$ai_input" == "exit" ]]; then
             exit 0
         elif [[ -z "$ai_input" ]]; then
-            echo -e "${YELLOW}Please enter a command${NC}"
+            printf "${YELLOW}Please enter a command${NC}\n"
         else
-            # integrate with an actual AI API here
-            echo -e "${PURPLE}🤖 AI: Processing '$ai_input'...${NC}"
-
-            response=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
-                        -H "x-goog-api-key: $GEMINI_API_KEY" \
-                        -H 'Content-Type: application/json' \
-                        -X POST \
-                        -d '{
-                            "systemInstruction": {"parts": [{"text": "You are a terminal command generator. Generate only the shell command needed, no explanations or markdown. Be concise, and as directly related to the query as you possibly can. "}]},
-                            "contents": [{"role": "user", "parts": [{"text": "'"$ai_input"'"}]}],
-                            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 100, "thinkingConfig": {"thinkingBudget": 0}},
-                        }')
-
-            # Process response with safety_check.py
-            # This handles JSON parsing, error checking, and safety validation
-            result=$(echo "$response" | python3 safety_check.py 2>&1)
+            # Call the Python core (handles API, Context, Safety)
+            # Capture stdout (command) and stderr (warnings/errors)
+            # We use a temp file for stderr to keep it clean
+            output=$("$SCRIPT_DIR/ai_core.py" "$ai_input" 2> /tmp/ai_error.log)
+            echo $output
             exit_code=$?
 
+            # Check for safety warnings or errors
+            if [[ -s /tmp/ai_error.log ]]; then
+                printf "${RED}$(cat /tmp/ai_error.log)${NC}\n"
+            fi
+
             if [[ $exit_code -eq 0 ]]; then
-                echo -e "${PURPLE}🤖 AI: $result${NC}"
-                echo -e "${CYAN}🤖 Suggested command: $result${NC}"
-                echo -ne "${YELLOW}Execute this command? (y/n/i to edit): ${NC}"
+                result="$output"
+                printf "${PURPLE}🤖 AI: $result${NC}\n"
+                #echo -e "${CYAN}🤖 Suggested command: $result${NC}"
+                printf "${YELLOW}Execute this command? (y/n/i to edit): ${NC}"
                 read -r confirmInput
                 
                 if [[ "${confirmInput}" == "i" || "${confirmInput}" == "I" ]]; then
@@ -66,26 +60,19 @@ ai_mode() {
 
                 if [[ "${confirmInput}" == "y" || "${confirmInput}" == "Y" ]]; then
                     eval "$result"
+                    # Update history only after successful execution
+                    python "$SCRIPT_DIR/update_session.py" "$ai_input" "$result"
                 else
-                    echo -e "${RED}Command cancelled${NC}"
+                    printf "${RED}Command cancelled${NC}\n"
                 fi
             else
                 # Error or safety violation occurred
-                echo -e "${RED}$result${NC}"
+                printf "${RED}$result${NC}\n"
             fi
 
         fi
     done
 }
 
-# Main shell loop
-while true; do
-    read -r input
-    if [[ "$input" == "agent" ]]; then
-        ai_mode
-    elif [[ "$input" == "exit" ]]; then
-        break
-    else
-        echo -e "${RED}Invalid command${NC}"
-    fi
-done
+# Start AI mode immediately
+ai_mode

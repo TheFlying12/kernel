@@ -142,5 +142,5 @@ FUTURE ENHANCEMENTS:
 
 NOTES ON CURRENT DEVELOPMENT:
 ----------------------------
-- can pipe output to a python file using this result=$(echo "$response" | python3 parse_response.py)
+- can pipe output to a python file using this result=$(echo "$response" | python parse_response.py)
 - need to write interaction to be like above, AI doesnt anticipate latency issues but can cross that bridge later.

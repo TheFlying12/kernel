@@ -2,23 +2,29 @@
     "candidates": [
         {
             "content": {
+                "parts": [
+                    {
+                        "text": "clear"
+                    }
+                ],
                 "role": "model"
             },
-            "finishReason": "MAX_TOKENS",
+            "finishReason": "STOP",
             "index": 0
         }
     ],
     "usageMetadata": {
-        "promptTokenCount": 161,
-        "totalTokenCount": 260,
+        "promptTokenCount": 1291,
+        "candidatesTokenCount": 1,
+        "totalTokenCount": 1312,
         "promptTokensDetails": [
             {
                 "modality": "TEXT",
-                "tokenCount": 161
+                "tokenCount": 1291
             }
         ],
-        "thoughtsTokenCount": 99
+        "thoughtsTokenCount": 20
     },
     "modelVersion": "gemini-2.5-flash",
-    "responseId": "4looaeSQCoqnmtkP-Ku32A8"
+    "responseId": "M5craef8EpWtmtkPivnfkQo"
 }

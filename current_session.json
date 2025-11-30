@@ -15,6 +15,10 @@
         {
             "command": "inside the directory Coding, stage a commit on the ai_terminal_thing with the commit message \"increase token window, added more directory context, can now handle larger tasks.\" then push to the repo",
             "output": "cd Documents/Me/Coding/ai_terminal_thing && git add . && git commit -m \"increase token window, added more directory context, can now handle larger tasks.\" && git push"
+        },
+        {
+            "command": "clear",
+            "output": "clear"
         }
     ],
     "cwd": "/Users/tejus/Documents/Me/Coding/ai_terminal_thing",

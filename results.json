@@ -4,7 +4,7 @@
             "content": {
                 "parts": [
                     {
-                        "text": "mkdir -p /Users/tejus/Documents/Me/Coding/testing && cd /Users/tejus/Documents/Me/Coding/testing && touch app.py requirements.txt && mkdir templates static"
+                        "text": "{\"command\": \"git push --set-upstream origin prod_phase_1\", \"inverse\": null}"
                     }
                 ],
                 "role": "model"
@@ -14,17 +14,24 @@
         }
     ],
     "usageMetadata": {
-        "promptTokenCount": 1147,
-        "candidatesTokenCount": 43,
-        "totalTokenCount": 1474,
+        "promptTokenCount": 1401,
+        "candidatesTokenCount": 22,
+        "totalTokenCount": 1498,
+        "cachedContentTokenCount": 960,
         "promptTokensDetails": [
             {
                 "modality": "TEXT",
-                "tokenCount": 1147
+                "tokenCount": 1401
             }
         ],
-        "thoughtsTokenCount": 284
+        "cacheTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 960
+            }
+        ],
+        "thoughtsTokenCount": 75
     },
     "modelVersion": "gemini-2.5-flash",
-    "responseId": "V0ouadiKCO6-qtsPgISZgAw"
+    "responseId": "KkwuaZbmA4zVz7IPy6eTmAM"
 }

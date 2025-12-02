@@ -137,7 +137,12 @@ def call_gemini(query, api_key, session):
     # Construct context-aware prompt
     history_text = ""
     for item in session.get("history", [])[-5:]: # Last 5 items
-        history_text += f"User: {item['command']}\nAI: {item['output']}\n"
+        output_context = ""
+        if item.get('exit_code') is not None:
+            status = "Failed" if item['exit_code'] != 0 else "Success"
+            output_context = f"\nExit Code: {item['exit_code']} ({status})\nOutput:\n{item.get('stdout', '')[:500]}" # Limit output to 500 chars
+            
+        history_text += f"User: {item['command']}\nAI: {item['output']}{output_context}\n"
         
     # Get directory context
     dir_context = get_directory_context()

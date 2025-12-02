@@ -37,6 +37,8 @@ def init_db():
         user_query TEXT,
         generated_command TEXT,
         inverse_command TEXT,
+        exit_code INTEGER,
+        command_output TEXT,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(session_id) REFERENCES sessions(id)
     )
@@ -55,6 +57,16 @@ def init_db():
         UNIQUE(query_hash, context_hash)
     )
     ''')
+    
+    # Migration: Add columns if they don't exist (for existing DBs)
+    try:
+        cursor.execute('ALTER TABLE history ADD COLUMN exit_code INTEGER')
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute('ALTER TABLE history ADD COLUMN command_output TEXT')
+    except sqlite3.OperationalError:
+        pass
     
     conn.commit()
     conn.close()
@@ -80,14 +92,14 @@ def get_latest_session_id():
         return row['id']
     return create_session(os.getcwd(), os.environ.get("SHELL", "unknown"))
 
-def add_history(session_id, user_query, generated_command, inverse_command=None):
+def add_history(session_id, user_query, generated_command, inverse_command=None, exit_code=None, command_output=None):
     """Adds a command interaction to history."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO history (session_id, user_query, generated_command, inverse_command)
-        VALUES (?, ?, ?, ?)
-    ''', (session_id, user_query, generated_command, inverse_command))
+        INSERT INTO history (session_id, user_query, generated_command, inverse_command, exit_code, command_output)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (session_id, user_query, generated_command, inverse_command, exit_code, command_output))
     conn.commit()
     conn.close()
 
@@ -96,7 +108,7 @@ def get_recent_history(limit=5):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT user_query, generated_command, inverse_command 
+        SELECT user_query, generated_command, inverse_command, exit_code, command_output 
         FROM history 
         ORDER BY timestamp DESC 
         LIMIT ?
@@ -104,7 +116,7 @@ def get_recent_history(limit=5):
     rows = cursor.fetchall()
     conn.close()
     # Return in reverse order (oldest first) for context
-    return [{"command": row['user_query'], "output": row['generated_command'], "inverse": row['inverse_command']} for row in reversed(rows)]
+    return [{"command": row['user_query'], "output": row['generated_command'], "inverse": row['inverse_command'], "exit_code": row['exit_code'], "stdout": row['command_output']} for row in reversed(rows)]
 
 def get_context_hash(cwd, shell, os_name):
     """Generates a hash for the current environment context."""

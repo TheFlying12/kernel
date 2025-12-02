@@ -30,12 +30,23 @@ ai_mode() {
             fi
             
             printf "${PURPLE}🤖 Undo: $undo_cmd${NC}\n"
-            printf "${YELLOW}Execute undo? (y/n): ${NC}"
-            read -r confirmUndo
-            if [[ "${confirmUndo}" == "y" || "${confirmUndo}" == "Y" ]]; then
-                eval "$undo_cmd"
-                # We don't add undo to history to prevent infinite undo loops, or we could add it as a new command
-                python3 "$SCRIPT_DIR/update_session.py" "undo" "$undo_cmd"
+            
+            # Allow editing for Undo
+            if [ -n "$ZSH_VERSION" ]; then
+                vared -p "${YELLOW}Edit undo (Enter to execute): ${NC}" -c undo_cmd
+            elif command -v zsh >/dev/null 2>&1; then
+                undo_cmd=$(PREFILLED="$undo_cmd" zsh -f -i -c 'vared -p "Edit undo (Enter to execute): " -c PREFILLED; echo -n "$PREFILLED"')
+            else
+                read -e -p "Edit undo (Enter to execute): " -i "$undo_cmd" undo_cmd
+            fi
+            
+            if [[ -n "$undo_cmd" ]]; then
+                # Capture output of undo
+                exec_out=$(eval "$undo_cmd" 2>&1)
+                exec_code=$?
+                echo "$exec_out"
+                
+                python3 "$SCRIPT_DIR/update_session.py" "undo" "$undo_cmd" "" "$exec_code" "$exec_out"
             else
                 printf "${RED}Undo cancelled${NC}\n"
             fi
@@ -67,9 +78,20 @@ ai_mode() {
                 fi
                 
                 printf "${PURPLE}🤖 AI: $result${NC}\n"
-                #echo -e "${CYAN}🤖 Suggested command: $result${NC}"
-                printf "${YELLOW}Execute this command? (y/n/i to edit): ${NC}"
-                read -r confirmInput
+                
+                # Check for safety warning in stderr log
+                is_safe=true
+                if [[ -s /tmp/ai_error.log ]]; then
+                    if grep -q "WARNING" /tmp/ai_error.log; then
+                        is_safe=false
+                    fi
+                fi
+                
+                confirmInput="y"
+                if [[ "$is_safe" == "false" ]]; then
+                     printf "${YELLOW}Execute this command? (y/n/i to edit): ${NC}"
+                     read -r confirmInput
+                fi
                 
                 if [[ "${confirmInput}" == "i" || "${confirmInput}" == "I" ]]; then
                     # Check if running in Zsh
@@ -89,14 +111,17 @@ ai_mode() {
                 fi
 
                 if [[ "${confirmInput}" == "y" || "${confirmInput}" == "Y" ]]; then
-                    eval "$result"
-                    # Update history only after successful execution
-                    # Pass the inverse command to update_session.py (it will handle it if we add support, 
-                    # but for now update_session just takes query and executed command. 
-                    # We need to update update_session.py to accept inverse command or just save it here?
-                    # Actually, update_session.py saves what happened. The inverse is metadata.
-                    # Let's update update_session.py to take a 3rd arg optionally.
-                    python3 "$SCRIPT_DIR/update_session.py" "$ai_input" "$result" "$inverse_cmd"
+                    # Execute and capture output (stdout + stderr combined)
+                    # We use a trick to print to screen AND capture to variable
+                    # But for simplicity in shell, let's just run it and redirect to a temp file to read back
+                    
+                    eval "$result" > /tmp/ai_exec.log 2>&1
+                    exec_code=$?
+                    cat /tmp/ai_exec.log
+                    exec_out=$(cat /tmp/ai_exec.log)
+                    
+                    # Update history with output and exit code
+                    python3 "$SCRIPT_DIR/update_session.py" "$ai_input" "$result" "$inverse_cmd" "$exec_code" "$exec_out"
                 else
                     printf "${RED}Command cancelled${NC}\n"
                 fi

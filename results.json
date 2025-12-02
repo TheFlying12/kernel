@@ -4,7 +4,7 @@
             "content": {
                 "parts": [
                     {
-                        "text": "clear"
+                        "text": "{\"command\": \"git push --set-upstream origin prod_phase_1\", \"inverse\": null}"
                     }
                 ],
                 "role": "model"
@@ -14,17 +14,24 @@
         }
     ],
     "usageMetadata": {
-        "promptTokenCount": 1291,
-        "candidatesTokenCount": 1,
-        "totalTokenCount": 1312,
+        "promptTokenCount": 1401,
+        "candidatesTokenCount": 22,
+        "totalTokenCount": 1498,
+        "cachedContentTokenCount": 960,
         "promptTokensDetails": [
             {
                 "modality": "TEXT",
-                "tokenCount": 1291
+                "tokenCount": 1401
             }
         ],
-        "thoughtsTokenCount": 20
+        "cacheTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 960
+            }
+        ],
+        "thoughtsTokenCount": 75
     },
     "modelVersion": "gemini-2.5-flash",
-    "responseId": "M5craef8EpWtmtkPivnfkQo"
+    "responseId": "KkwuaZbmA4zVz7IPy6eTmAM"
 }

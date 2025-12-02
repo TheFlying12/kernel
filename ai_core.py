@@ -10,9 +10,10 @@ import urllib.error
 import platform
 import logging
 
-
 # Load .env from script directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dir)
+import db
 load_dotenv(os.path.join(script_dir, ".env"))
 
 # Configuration
@@ -104,23 +105,19 @@ def get_directory_context():
     return unique_dirs[:50]
 
 def load_session():
-    # Default session structure
-    default_session = {
-        "history": [],
+    # Load recent history from DB
+    try:
+        history = db.get_recent_history(limit=5)
+    except Exception:
+        history = []
+    
+    return {
+        "history": history,
         "cwd": os.getcwd(),
         "shell": os.environ.get("SHELL", "unknown"),
         "os": platform.system(),
         "home_directory": os.path.expanduser("~")
     }
-    
-    if os.path.exists(SESSION_FILE):
-        try:
-            with open(SESSION_FILE, 'r') as f:
-                return json.load(f)
-        except Exception:
-            pass # Return default if load fails
-            
-    return default_session
 
 def save_session(session):
     # Ensure directory exists
@@ -161,10 +158,10 @@ User Query: {query}
 
     data = {
         "systemInstruction": {
-            "parts": [{"text": "You are a terminal command generator. Generate only the shell command needed, no explanations or markdown. Be concise. Use the provided context (OS, CWD, History) to generate accurate commands."}]
+            "parts": [{"text": "You are a terminal command generator. You must output a JSON object with two keys: 'command' (the shell command to execute) and 'inverse' (the command to undo this action). If there is no undo (like 'ls'), set 'inverse' to null. Be concise. Example: {\"command\": \"mkdir foo\", \"inverse\": \"rmdir foo\"}"}]
         },
         "contents": [{"role": "user", "parts": [{"text": context_prompt}]}],
-        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192}
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192, "responseMimeType": "application/json"}
     }
     
 
@@ -198,7 +195,13 @@ User Query: {query}
                 # Clean up markdown code blocks if present
                 candidate = re.sub(r'^```\w*\n', '', candidate)
                 candidate = re.sub(r'\n```$', '', candidate)
-                return candidate.strip()
+                
+                try:
+                    response_json = json.loads(candidate)
+                    return response_json
+                except json.JSONDecodeError:
+                    # Fallback if model forgets JSON
+                    return {"command": candidate, "inverse": None}
             except KeyError as e:
                 with open('errors.json', 'w') as f:
                     json.dump(result, f, indent=4)
@@ -220,28 +223,59 @@ def main():
         
     query = " ".join(sys.argv[1:])
     
+    # Initialize DB
+    try:
+        db.init_db()
+    except Exception:
+        pass # Fail gracefully if DB is locked or inaccessible
+    
     api_key = get_api_key()
     if not api_key:
         print("Error: GEMINI_API_KEY not found in environment or config.")
         sys.exit(1)
         
-    # Load and update session context
+    # Load context
     session = load_session()
-    session['cwd'] = os.getcwd() # Update CWD to current
     
-    command = call_gemini(query, api_key, session)
-    #print("\n"+command+"\nwhat api is returning post call_gemini\n", file=sys.stderr)
-    if command.startswith("Error:"):
-        print(command)
+    # Check Cache
+    try:
+        cached_command = db.check_cache(query, session['cwd'], session['shell'], session['os'])
+        if cached_command:
+            print(cached_command)
+            sys.exit(0)
+    except Exception:
+        pass
+    
+    response = call_gemini(query, api_key, session)
+    
+    if isinstance(response, str) and response.startswith("Error:"):
+        print(response)
+        sys.exit(1)
+        
+    command = response.get('command', '')
+    inverse = response.get('inverse', '')
+    
+    if not command:
+        print("Error: No command generated")
         sys.exit(1)
         
     is_safe, reason = safety_check(command)
     
     if not is_safe:
         print(f"WARNING: {reason}", file=sys.stderr)
-        
+    else:
+        # Cache successful response
+        try:
+            # We cache the JSON string to preserve the inverse
+            db.cache_response(query, session['cwd'], session['shell'], session['os'], json.dumps(response))
+        except Exception:
+            pass
     
-    print(command)
+    # Output format: COMMAND | INVERSE (separator for shell script to parse)
+    if inverse:
+        print(f"{command}|{inverse}")
+    else:
+        print(f"{command}|")
 
 if __name__ == "__main__":
     main()

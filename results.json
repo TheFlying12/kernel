@@ -4,7 +4,7 @@
             "content": {
                 "parts": [
                     {
-                        "text": "clear"
+                        "text": "mkdir -p /Users/tejus/Documents/Me/Coding/testing && cd /Users/tejus/Documents/Me/Coding/testing && touch app.py requirements.txt && mkdir templates static"
                     }
                 ],
                 "role": "model"
@@ -14,17 +14,17 @@
         }
     ],
     "usageMetadata": {
-        "promptTokenCount": 1291,
-        "candidatesTokenCount": 1,
-        "totalTokenCount": 1312,
+        "promptTokenCount": 1147,
+        "candidatesTokenCount": 43,
+        "totalTokenCount": 1474,
         "promptTokensDetails": [
             {
                 "modality": "TEXT",
-                "tokenCount": 1291
+                "tokenCount": 1147
             }
         ],
-        "thoughtsTokenCount": 20
+        "thoughtsTokenCount": 284
     },
     "modelVersion": "gemini-2.5-flash",
-    "responseId": "M5craef8EpWtmtkPivnfkQo"
+    "responseId": "V0ouadiKCO6-qtsPgISZgAw"
 }

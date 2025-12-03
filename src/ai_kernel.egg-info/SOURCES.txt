@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+src/ai_kernel/__init__.py
+src/ai_kernel/core.py
+src/ai_kernel/db.py
+src/ai_kernel/main.py
+src/ai_kernel/session.py
+src/ai_kernel.egg-info/PKG-INFO
+src/ai_kernel.egg-info/SOURCES.txt
+src/ai_kernel.egg-info/dependency_links.txt
+src/ai_kernel.egg-info/entry_points.txt
+src/ai_kernel.egg-info/requires.txt
+src/ai_kernel.egg-info/top_level.txt

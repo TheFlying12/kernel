@@ -10,9 +10,9 @@ import urllib.error
 import platform
 import logging
 
+
 # Load .env from script directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(script_dir)
 import db
 load_dotenv(os.path.join(script_dir, ".env"))
 
@@ -163,7 +163,7 @@ User Query: {query}
 
     data = {
         "systemInstruction": {
-            "parts": [{"text": "You are a terminal command generator. You must output a JSON object with two keys: 'command' (the shell command to execute) and 'inverse' (the command to undo this action). If there is no undo (like 'ls'), set 'inverse' to null. Be concise. Example: {\"command\": \"mkdir foo\", \"inverse\": \"rmdir foo\"}"}]
+            "parts": [{"text": "You are a terminal command generator. You must output a JSON object with two keys: 'command' (the shell command to execute) and 'inverse' (the command to undo this action). If there is no undo (like 'ls'), set 'inverse' to null. Be concise. On Windows, always use 'pip' instead of 'pip3' for python packages. Example: {\"command\": \"mkdir foo\", \"inverse\": \"rmdir foo\"}"}]
         },
         "contents": [{"role": "user", "parts": [{"text": context_prompt}]}],
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192, "responseMimeType": "application/json"}
@@ -221,13 +221,7 @@ User Query: {query}
     except Exception as e:
         return f"Error: {str(e)}"
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: ai_core.py <natural_language_query>")
-        sys.exit(1)
-        
-    query = " ".join(sys.argv[1:])
-    
+def process_query(query):
     # Initialize DB
     try:
         db.init_db()
@@ -236,8 +230,7 @@ def main():
     
     api_key = get_api_key()
     if not api_key:
-        print("Error: GEMINI_API_KEY not found in environment or config.")
-        sys.exit(1)
+        return {"error": "GEMINI_API_KEY not found in environment or config."}
         
     # Load context
     session = load_session()
@@ -246,28 +239,27 @@ def main():
     try:
         cached_command = db.check_cache(query, session['cwd'], session['shell'], session['os'])
         if cached_command:
-            print(cached_command)
-            sys.exit(0)
+            try:
+                return json.loads(cached_command)
+            except:
+                return {"command": cached_command, "inverse": None}
     except Exception:
         pass
     
     response = call_gemini(query, api_key, session)
     
     if isinstance(response, str) and response.startswith("Error:"):
-        print(response)
-        sys.exit(1)
+        return {"error": response}
         
     command = response.get('command', '')
-    inverse = response.get('inverse', '')
     
     if not command:
-        print("Error: No command generated")
-        sys.exit(1)
+        return {"error": "No command generated"}
         
     is_safe, reason = safety_check(command)
     
     if not is_safe:
-        print(f"WARNING: {reason}", file=sys.stderr)
+        return {"error": f"WARNING: {reason}"}
     else:
         # Cache successful response
         try:
@@ -276,7 +268,23 @@ def main():
         except Exception:
             pass
     
-    # Output format: COMMAND | INVERSE (separator for shell script to parse)
+    return response
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: ai_core.py <natural_language_query>")
+        sys.exit(1)
+        
+    query = " ".join(sys.argv[1:])
+    result = process_query(query)
+    
+    if "error" in result:
+        print(result["error"])
+        sys.exit(1)
+        
+    command = result.get('command', '')
+    inverse = result.get('inverse', '')
+    
     if inverse:
         print(f"{command}|{inverse}")
     else:

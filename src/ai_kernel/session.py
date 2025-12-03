@@ -4,8 +4,7 @@ import sys
 
 # Ensure we can import db
 script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(script_dir)
-import db
+from . import db
 
 def main():
     if len(sys.argv) < 3:

@@ -31,6 +31,12 @@ DANGER_PATTERNS = [
     r'mkfs',
     r'chmod\s+-R\s+777',
     r':\(\)\{ :\|:& \};:',
+    r'wget\s+.*\|\s*sh',
+    r'curl\s+.*\|\s*sh',
+    r'>\s*/dev/sd[a-z]',
+    r'^shutdown',
+    r'^reboot',
+    r'^init\s+0',
 ]
 
 def get_api_key():
@@ -163,7 +169,7 @@ User Query: {query}
 
     data = {
         "systemInstruction": {
-            "parts": [{"text": "You are a terminal command generator. You must output a JSON object with two keys: 'command' (the shell command to execute) and 'inverse' (the command to undo this action). If there is no undo (like 'ls'), set 'inverse' to null. Be concise. On Windows, always use 'pip' instead of 'pip3' for python packages. Example: {\"command\": \"mkdir foo\", \"inverse\": \"rmdir foo\"}"}]
+            "parts": [{"text": "You are a terminal command generator. You must output a JSON object with two keys: 'command' (the shell command to execute) and 'inverse' (the command to undo this action). If there is no undo (like 'ls'), set 'inverse' to null. Be concise. On Windows, always use 'pip' instead of 'pip3' for python packages. Example: {\"command\": \"mkdir foo\", \"inverse\": \"rmdir foo\"} Always kee the commands as concise as possible, apply Occam's razor whenever possible."}]
         },
         "contents": [{"role": "user", "parts": [{"text": context_prompt}]}],
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192, "responseMimeType": "application/json"}
@@ -259,7 +265,9 @@ def process_query(query):
     is_safe, reason = safety_check(command)
     
     if not is_safe:
-        return {"error": f"WARNING: {reason}"}
+        # Instead of error, return warning
+        response['safety_warning'] = reason
+        # return {"error": f"WARNING: {reason}"}
     else:
         # Cache successful response
         try:

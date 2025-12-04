@@ -42,9 +42,22 @@ def handle_undo(script_dir):
         undo_cmd = history[0]['inverse']
         print(f"{PURPLE}🤖 Undo: {undo_cmd}{NC}")
         
-        confirm = input(f"{YELLOW}Edit undo (Enter to execute): {NC}")
-        if confirm.strip():
-            undo_cmd = confirm
+        # Safety Check for Undo
+        is_safe, reason = core.safety_check(undo_cmd)
+        if not is_safe:
+            print(f"{RED}WARNING: Undo command matched danger pattern: {reason}{NC}")
+            confirm = input(f"{YELLOW}Execute DANGEROUS undo? (y/n): {NC}")
+            if confirm.lower() != 'y':
+                print(f"{RED}Undo cancelled{NC}")
+                return
+        else:
+            # Auto-confirm safe undo if desired, or keep manual for undo since it's sensitive
+            # User asked for auto-run on "command", undo might be different. 
+            # Let's keep manual confirm for undo as it's rare, OR allow editing.
+            # The original code allowed editing.
+            confirm = input(f"{YELLOW}Edit undo (Enter to execute): {NC}")
+            if confirm.strip():
+                undo_cmd = confirm
 
         if undo_cmd:
             exit_code, output = execute_command(undo_cmd)
@@ -96,11 +109,17 @@ def main():
 
         command = result.get('command')
         inverse = result.get('inverse')
+        safety_warning = result.get('safety_warning')
 
         print(f"{PURPLE}🤖 AI: {command}{NC}")
 
-        confirm = input(f"{YELLOW}Execute this command? (y/n/i to edit): {NC}").strip().lower()
-
+        if safety_warning:
+            print(f"{RED}WARNING: {safety_warning}{NC}")
+            confirm = input(f"{YELLOW}Execute this command? (y/n/i to edit): {NC}").strip().lower()
+        else:
+            # Auto-run safe commands
+            confirm = 'y'
+            
         if confirm == 'i':
             print(f"{YELLOW}Edit command: {NC}", end='')
             # Simple input for editing (prefill is hard cross-platform without deps)

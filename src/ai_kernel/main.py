@@ -3,8 +3,9 @@ import sys
 import os
 import subprocess
 import shlex
-import core
-import db
+from . import core
+from . import db
+from . import config
 
 # ANSI Colors
 BLUE = '\033[0;34m'
@@ -73,6 +74,9 @@ def handle_undo(script_dir):
 
 def main():
     print_welcome()
+    
+    # Ensure API key is configured (prompt on first run)
+    config.ensure_api_key()
     
     # Initialize DB
     try:

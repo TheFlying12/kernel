@@ -9,11 +9,12 @@ import urllib.request
 import urllib.error
 import platform
 import logging
+from . import config
 
 
 # Load .env from script directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
-import db
+from . import db
 load_dotenv(os.path.join(script_dir, ".env"))
 
 # Configuration
@@ -40,23 +41,8 @@ DANGER_PATTERNS = [
 ]
 
 def get_api_key():
-    # Try environment variable first
-    api_key = os.getenv(API_KEY_ENV)
-    if api_key:
-        return api_key
-    
-    # Try config file
-    config_path = os.path.expanduser("~/.config/ai_terminal/config")
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, 'r') as f:
-                for line in f:
-                    if line.startswith("GEMINI_API_KEY="):
-                        return line.split("=", 1)[1].strip()
-        except Exception:
-            pass
-            
-    return None
+    """Get the Gemini API key using the config module."""
+    return config.get_api_key()
 
 def safety_check(command):
     for pattern in DANGER_PATTERNS:

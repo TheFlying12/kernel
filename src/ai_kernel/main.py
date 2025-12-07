@@ -3,9 +3,16 @@ import sys
 import os
 import subprocess
 import shlex
-from . import core
-from . import db
-from . import config
+
+# Handle imports for both package and direct execution
+try:
+    from . import core
+    from . import db
+    from . import config
+except ImportError:
+    import core
+    import db
+    import config
 
 # ANSI Colors
 BLUE = '\033[0;34m'

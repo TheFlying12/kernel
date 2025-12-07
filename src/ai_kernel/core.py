@@ -9,12 +9,17 @@ import urllib.request
 import urllib.error
 import platform
 import logging
-from . import config
 
+# Handle imports for both package and direct execution
+try:
+    from . import config
+    from . import db
+except ImportError:
+    import config
+    import db
 
 # Load .env from script directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
-from . import db
 load_dotenv(os.path.join(script_dir, ".env"))
 
 # Configuration

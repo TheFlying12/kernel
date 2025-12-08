@@ -1,0 +1,3 @@
+global-exclude *.env
+global-exclude .env
+exclude src/ai_kernel/.env

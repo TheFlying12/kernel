@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os
-from dotenv import load_dotenv
 import sys
 import json
 import subprocess
@@ -17,10 +16,6 @@ try:
 except ImportError:
     import config
     import db
-
-# Load .env from script directory
-script_dir = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(script_dir, ".env"))
 
 # Configuration
 API_KEY_ENV = "GEMINI_API_KEY"

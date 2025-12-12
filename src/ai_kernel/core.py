@@ -155,7 +155,7 @@ User Query: {query}
 
     data = {
         "systemInstruction": {
-            "parts": [{"text": "You are a terminal command generator. You must output a JSON object with two keys: 'command' (the shell command to execute) and 'inverse' (the command to undo this action). If there is no undo (like 'ls'), set 'inverse' to null. Be concise. On Windows, always use 'pip' instead of 'pip3' for python packages. Example: {\"command\": \"mkdir foo\", \"inverse\": \"rmdir foo\"} Always kee the commands as concise as possible, apply Occam's razor whenever possible."}]
+            "parts": [{"text": "You are a terminal command generator. You must output a JSON object. For simple single-step actions, use keys 'command' (string) and 'inverse' (string or null). For complex tasks requiring multiple steps, use key 'plan' which is a list of lists of strings. Each inner list represents a step containing commands that can be run in parallel. Example: { \"plan\": [ [\"mkdir project\"], [\"touch project/a.txt\", \"touch project/b.txt\"] ] } implies 'mkdir project' runs first, then 'touch a' and 'touch b' run simultaneously. Return 'inverse' for the whole plan if possible (as a single cleanup script or string). Be concise. On Windows, always use 'pip' instead of 'pip3'. Apply Occam's razor."}]
         },
         "contents": [{"role": "user", "parts": [{"text": context_prompt}]}],
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192, "responseMimeType": "application/json"}
@@ -244,20 +244,32 @@ def process_query(query):
         return {"error": response}
         
     command = response.get('command', '')
+    plan = response.get('plan', [])
     
-    if not command:
-        return {"error": "No command generated"}
-        
-    is_safe, reason = safety_check(command)
+    if not command and not plan:
+        return {"error": "No command or plan generated"}
     
-    if not is_safe:
-        # Instead of error, return warning
-        response['safety_warning'] = reason
-        # return {"error": f"WARNING: {reason}"}
+    # Safety Check
+    safety_warnings = []
+    
+    if command:
+        is_safe, reason = safety_check(command)
+        if not is_safe:
+            safety_warnings.append(reason)
+            
+    if plan:
+        for step in plan:
+            for cmd in step:
+                is_safe, reason = safety_check(cmd)
+                if not is_safe:
+                    safety_warnings.append(f"In '{cmd}': {reason}")
+    
+    if safety_warnings:
+        response['safety_warning'] = "; ".join(safety_warnings)
     else:
         # Cache successful response
         try:
-            # We cache the JSON string to preserve the inverse
+            # We cache the JSON string to preserve the inverse/plan
             db.cache_response(query, session['cwd'], session['shell'], session['os'], json.dumps(response))
         except Exception:
             pass

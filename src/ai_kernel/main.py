@@ -23,22 +23,105 @@ PURPLE = '\033[0;35m'
 CYAN = '\033[0;36m'
 NC = '\033[0m' # No Color
 
+import concurrent.futures
+import json
+
 def print_welcome():
     print(f"{BLUE}Ask Away!!{NC}")
     print("----------------------------------------")
 
-def execute_command(command):
+def execute_command(command, mute_output=False):
     try:
+        # Check for cd command
+        if command.startswith("cd "):
+            target_dir = command[3:].strip()
+            # Handle absolute and relative paths
+            if not target_dir: # just 'cd'
+                target_dir = os.path.expanduser("~")
+            else:
+                target_dir = os.path.expanduser(target_dir)
+            
+            try:
+                os.chdir(target_dir)
+                if not mute_output:
+                    print(f"{GREEN}Changed directory to: {os.getcwd()}{NC}")
+                return 0, f"Changed directory to: {os.getcwd()}"
+            except FileNotFoundError:
+                err = f"Directory not found: {target_dir}"
+                if not mute_output: print(f"{RED}{err}{NC}")
+                return 1, err
+            except OSError as e:
+                err = f"Error changing directory: {e}"
+                if not mute_output: print(f"{RED}{err}{NC}")
+                return 1, err
+
         # Use shell=True to allow piping and complex commands
         # On Windows, this uses cmd.exe or PowerShell depending on the environment
         process = subprocess.run(command, shell=True, text=True, capture_output=True)
-        print(process.stdout)
+        
+        output = process.stdout
         if process.stderr:
-            print(f"{RED}{process.stderr}{NC}")
-        return process.returncode, process.stdout
+            output += f"\nStderr: {process.stderr}"
+            
+        if not mute_output:
+            print(process.stdout)
+            if process.stderr:
+                print(f"{RED}{process.stderr}{NC}")
+                
+        return process.returncode, output
     except Exception as e:
-        print(f"{RED}Execution failed: {e}{NC}")
+        if not mute_output: print(f"{RED}Execution failed: {e}{NC}")
         return 1, str(e)
+
+def execute_plan(plan):
+    full_output = []
+    overall_exit_code = 0
+    
+    print(f"{CYAN}Executing Plan ({len(plan)} steps)...{NC}")
+    
+    for i, step in enumerate(plan):
+        print(f"\n{BLUE}Step {i+1}/{len(plan)}:{NC}")
+        
+        # If single command, run normally
+        if len(step) == 1:
+            cmd = step[0]
+            print(f"{PURPLE}Running: {cmd}{NC}")
+            details = f"Step {i+1} [Sequential]: {cmd}\n"
+            exit_code, output = execute_command(cmd)
+            details += f"Exit Code: {exit_code}\nOutput:\n{output}\n"
+            full_output.append(details)
+            if exit_code != 0:
+                print(f"{RED}Step failed. Stopping plan execution.{NC}")
+                overall_exit_code = exit_code
+                break
+        else:
+            # Parallel execution
+            print(f"{PURPLE}Running in parallel: {step}{NC}")
+            details = f"Step {i+1} [Parallel]: {step}\n"
+            
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                # We map commands to futures
+                future_to_cmd = {executor.submit(execute_command, cmd, mute_output=False): cmd for cmd in step}
+                
+                step_failed = False
+                for future in concurrent.futures.as_completed(future_to_cmd):
+                    cmd = future_to_cmd[future]
+                    try:
+                        exit_code, output = future.result()
+                        details += f"-- Cmd: {cmd}\nExit Code: {exit_code}\nOutput:\n{output}\n"
+                        if exit_code != 0:
+                            step_failed = True
+                    except Exception as exc:
+                        details += f"-- Cmd: {cmd} generated an exception: {exc}\n"
+                        step_failed = True
+                
+                full_output.append(details)
+                if step_failed:
+                    print(f"{RED}One or more parallel commands failed. Stopping plan execution.{NC}")
+                    overall_exit_code = 1
+                    break
+                    
+    return overall_exit_code, "\n".join(full_output)
 
 def handle_undo(script_dir):
     try:
@@ -93,7 +176,8 @@ def main():
 
     while True:
         try:
-            ai_input = input(f"{BLUE}AI> {NC}")
+            cwd_str = os.getcwd().replace(os.path.expanduser("~"), "~")
+            ai_input = input(f"{BLUE}{cwd_str} AI> {NC}")
         except EOFError:
             break
         except KeyboardInterrupt:
@@ -119,34 +203,47 @@ def main():
             continue
 
         command = result.get('command')
+        plan = result.get('plan')
         inverse = result.get('inverse')
         safety_warning = result.get('safety_warning')
 
-        print(f"{PURPLE}🤖 AI: {command}{NC}")
+        if plan:
+            print(f"{PURPLE}🤖 AI Proposed Plan:{NC}")
+            for i, step in enumerate(plan):
+                if len(step) > 1:
+                    print(f"  {i+1}. [Parallel] {step}")
+                else:
+                    print(f"  {i+1}. {step[0]}")
+        elif command:
+            print(f"{PURPLE}🤖 AI: {command}{NC}")
 
         if safety_warning:
             print(f"{RED}WARNING: {safety_warning}{NC}")
-            confirm = input(f"{YELLOW}Execute this command? (y/n/i to edit): {NC}").strip().lower()
+            confirm = input(f"{YELLOW}Execute this? (y/n/i to edit): {NC}").strip().lower()
         else:
             # Auto-run safe commands
             confirm = 'y'
             
-        if confirm == 'i':
+        if confirm == 'i' and command:
             print(f"{YELLOW}Edit command: {NC}", end='')
-            # Simple input for editing (prefill is hard cross-platform without deps)
-            # We'll just ask for new input, defaulting to old if empty is not ideal but simple
             print(f"(Copy/Paste the command to edit: {command})")
             new_command = input()
             if new_command.strip():
                 command = new_command
             confirm = 'y'
+        elif confirm == 'i' and plan:
+            print(f"{RED}Editing complex plans is not yet supported. Proceed or cancel.{NC}")
+            confirm = input(f"{YELLOW}Execute plan? (y/n): {NC}").strip().lower()
 
         if confirm == 'y':
-            exit_code, output = execute_command(command)
-            
-            # Update History
             session_id = db.get_latest_session_id()
-            db.add_history(session_id, ai_input, command, inverse, exit_code, output)
+            
+            if plan:
+                exit_code, output = execute_plan(plan)
+                db.add_history(session_id, ai_input, json.dumps({"plan": plan}), inverse, exit_code, output)
+            elif command:
+                exit_code, output = execute_command(command)
+                db.add_history(session_id, ai_input, command, inverse, exit_code, output)
         else:
             print(f"{RED}Command cancelled{NC}")
 

@@ -12,3 +12,7 @@ src/ktml_agent.egg-info/SOURCES.txt
 src/ktml_agent.egg-info/dependency_links.txt
 src/ktml_agent.egg-info/entry_points.txt
 src/ktml_agent.egg-info/top_level.txt
+tests/test_integration.py
+tests/test_performance.py
+tests/test_reliability.py
+tests/test_utils.py

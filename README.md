@@ -75,13 +75,13 @@ The configuration file stores your API key:
 GEMINI_API_KEY=your_key_here
 ```
 
-### Environment Variable
+<!-- ### Environment Variable
 
 Alternatively, you can set the API key as an environment variable:
 
 ```bash
 export GEMINI_API_KEY=your_key_here
-```
+``` -->
 
 ## How It Works
 
@@ -171,7 +171,3 @@ If you encounter database errors:
 rm ~/.ai_terminal/brain.db
 agent  # Will recreate the database
 ```
-
-## Credits
-
-Powered by Google's Gemini API

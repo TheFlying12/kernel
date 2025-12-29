@@ -240,6 +240,8 @@ def process_query(query):
     
     response = call_gemini(query, api_key, session)
     
+    print(response)
+
     if isinstance(response, str) and response.startswith("Error:"):
         return {"error": response}
         
